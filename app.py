@@ -68,13 +68,13 @@ df = load_data()
 st.markdown(
     """
     <div class="hero">
-        <h1 style="margin-bottom:0.3rem;">Carnaval de Barranquilla: analítica del impacto turístico</h1>
+        <h1 style="margin-bottom:0.3rem;">🎭 Carnaval de Barranquilla: analítica del impacto turístico</h1>
         <p style="font-size:1.08rem; margin-bottom:0.35rem;">
             Análisis del comportamiento histórico del Carnaval de Barranquilla mediante técnicas de exploración,
             segmentación y predicción del impacto turístico.
         </p>
         <p style="margin-bottom:0.2rem;"><b>Programa:</b> Maestría en Analítica de Datos</p>
-        <p style="margin-bottom:0;"><b>Integrantes:</b> Mario Orozco · Rosa Mora · Natalia Sojo · Donnys Torres</p>
+        <p style="margin-bottom:0;"><b>Integrantes:</b> Natalia Sojo · [Nombre integrante 2] · [Nombre integrante 3] · [Nombre integrante 4]</p>
     </div>
     """,
     unsafe_allow_html=True,
@@ -84,6 +84,16 @@ c1, c2, c3 = st.columns(3)
 c1.metric("Años analizados", int(df["año"].nunique()))
 c2.metric("Máx. pasajeros en febrero", f"{int(df['pax_feb'].max()):,}".replace(",", "."))
 c3.metric("Variables del dataset", df.shape[1])
+
+st.markdown(
+    """
+    <div class="highlight">
+        Esta app presenta el análisis del comportamiento histórico del Carnaval de Barranquilla a partir de datos
+        de movilidad aérea, interés digital y contexto económico.
+    </div>
+    """,
+    unsafe_allow_html=True,
+)
 
 # ========= TABS =========
 tab1, tab2, tab3, tab4, tab5 = st.tabs([
@@ -96,66 +106,84 @@ tab1, tab2, tab3, tab4, tab5 = st.tabs([
 
 with tab1:
     st.markdown("<div class='section-card'>", unsafe_allow_html=True)
-    st.subheader("Contexto del estudio")
+    st.subheader("1.1 Contexto")
     st.write(
-        "El Carnaval de Barranquilla es uno de los eventos culturales y turísticos más relevantes de Colombia, "
-        "con efectos visibles sobre la movilidad de visitantes, la ocupación de servicios y la dinámica económica local. "
-        "En la mayoría de los informes públicos, su impacto suele resumirse en cifras agregadas de visitantes o derrama económica. "
-        "Sin embargo, esos reportes no siempre permiten identificar patrones históricos, comparar ediciones del evento ni anticipar el comportamiento "
-        "de futuras celebraciones a partir de señales observables en los datos."
+        "El Carnaval de Barranquilla es el segundo carnaval más grande del mundo y fue declarado "
+        "Patrimonio Oral e Inmaterial de la Humanidad por la UNESCO en 2003. Cada año, durante febrero, "
+        "la ciudad experimenta una transformación económica y turística marcada por el aumento en la llegada "
+        "de visitantes, la activación del comercio, la ocupación de servicios y la visibilidad nacional e internacional del evento."
     )
     st.write(
-        "Por ello, este proyecto propone una aproximación de analítica de datos centrada en el flujo turístico aéreo hacia Barranquilla. "
-        "La lógica del estudio parte de que la llegada de pasajeros por vía aérea constituye un indicador consistente, disponible y específico para la ciudad, "
-        "lo que lo convierte en una base metodológicamente sólida para estudiar el impacto del Carnaval en el período 2017–2025."
+        "Sin embargo, no todas las ediciones del Carnaval presentan el mismo comportamiento. Por ejemplo, "
+        "el Carnaval de 2020 ocurrió pocos días antes de la llegada del COVID-19 a Colombia, el de 2021 se realizó "
+        "sin público y en 2025 la presencia de Shakira como invitada especial generó un efecto diferencial en la atención "
+        "mediática y el atractivo del evento."
     )
     st.write(
-        "Además del flujo de pasajeros, se incorporan variables de interés digital y variables económicas construidas a partir de fuentes públicas, "
-        "con el fin de enriquecer la interpretación del fenómeno y construir una visión más integral del evento."
+        "En 2025, el Carnaval generó más de $840.000 millones de pesos en impacto económico y atrajo cerca de "
+        "800.000 visitantes. Esto plantea una pregunta relevante desde la analítica de datos: si el impacto del Carnaval "
+        "cambia cada año, ¿es posible detectar patrones históricos y anticipar su nivel de impacto turístico antes de que llegue febrero?"
     )
     st.markdown("</div>", unsafe_allow_html=True)
 
     st.markdown("<div class='section-card'>", unsafe_allow_html=True)
-    st.subheader("Objetivo general")
+    st.subheader("1.2 Objetivo del estudio")
     st.write(
-        "Analizar y caracterizar el impacto turístico del Carnaval de Barranquilla entre 2017 y 2025, empleando herramientas de análisis exploratorio, "
-        "clustering y clasificación sobre variables de movilidad aérea, interés digital y contexto económico."
+        "Desarrollar un pipeline de clustering + clasificación que permita analizar históricamente las ediciones "
+        "del Carnaval de Barranquilla entre 2017 y 2025 y predecir si el Carnaval 2027 tendrá un nivel de impacto "
+        "turístico ALTO, MEDIO o BAJO."
     )
-
-    st.subheader("Objetivos específicos")
     st.markdown(
         """
-        1. Explorar el comportamiento histórico del flujo de pasajeros asociado al Carnaval.
-        2. Identificar grupos o tipos de ediciones del Carnaval según su nivel de impacto turístico.
-        3. Construir una base analítica que sirva de insumo para un modelo de clasificación del nivel de impacto.
-        4. Relacionar el comportamiento del flujo turístico con señales de interés digital y variables económicas complementarias.
+        1. Agrupar históricamente las ediciones del Carnaval (2017–2025) según su nivel de impacto turístico usando K-Means y Clustering Jerárquico.  
+        2. Entrenar un modelo de clasificación capaz de predecir si el Carnaval 2027 tendrá un impacto turístico ALTO, MEDIO o BAJO usando información disponible antes de febrero.
         """
     )
     st.markdown("</div>", unsafe_allow_html=True)
 
     st.markdown("<div class='section-card'>", unsafe_allow_html=True)
-    st.subheader("Recolección y construcción de la base de datos")
-    st.write(
-        "La base consolidada se construyó integrando diferentes fuentes públicas. La fuente principal corresponde a los registros de Aerocivil, "
-        "de donde se obtuvo el número de pasajeros mensuales del aeropuerto Ernesto Cortissoz (BAQ). Esta fuente fue priorizada porque ofrece continuidad temporal, "
-        "especifidad geográfica para Barranquilla y una frecuencia mensual útil para comparar el comportamiento del mes de Carnaval frente al resto del año."
-    )
-    st.write(
-        "Como complemento, se incorporaron datos de Google Trends asociados al término de búsqueda relacionado con el Carnaval de Barranquilla. "
-        "Estas variables permiten aproximarse al interés digital previo al evento y funcionan como señales tempranas de atención o intención de viaje."
-    )
-    st.write(
-        "Finalmente, se añadieron variables económicas estimadas, como visitantes del Carnaval y algunos indicadores derivados, con el propósito de contextualizar "
-        "el impacto del evento más allá de la sola movilidad aérea. A partir de estas fuentes se realizó un proceso de limpieza, consolidación y generación de variables "
-        "ingenierizadas para construir el dataset final del proyecto."
-    )
+    st.subheader("1.3 Pregunta de investigación")
     st.markdown(
-        "<p class='small-note'><b>Decisión metodológica clave:</b> se priorizó el flujo de pasajeros como eje del estudio debido a que otras fuentes turísticas no mantenían la misma disponibilidad y granularidad para Barranquilla en todo el período de análisis.</p>",
-        unsafe_allow_html=True,
+        """
+        > **¿Es posible identificar patrones históricos en el flujo turístico del Carnaval de Barranquilla (2017–2025) y predecir si el Carnaval 2027 tendrá un nivel de impacto turístico ALTO, MEDIO o BAJO?**
+        """
     )
     st.markdown("</div>", unsafe_allow_html=True)
 
 with tab2:
+    st.markdown("<div class='section-card'>", unsafe_allow_html=True)
+    st.subheader("1.4 Fuentes de datos")
+
+    fuentes = pd.DataFrame({
+        "Fuente": [
+            "Aerocivil — datos.gov.co",
+            "Google Trends",
+            "Alcaldía de Barranquilla / Carnaval S.A.S."
+        ],
+        "Variable principal": [
+            "Pasajeros llegados al aeropuerto BAQ por mes",
+            "Interés de búsqueda 'Carnaval Barranquilla' en Colombia",
+            "Visitantes totales y gasto promedio por edición"
+        ],
+        "Link de referencia": [
+            "Datos abiertos Aerocivil",
+            "Google Trends Colombia",
+            "Barranquilla en cifras"
+        ]
+    })
+
+    st.dataframe(fuentes, use_container_width=True, hide_index=True)
+
+    st.markdown(
+        """
+        **Enlaces de consulta**
+        - [Aerocivil — datos.gov.co](https://www.datos.gov.co/Transporte/Llegada-pasajeros-mensual-por-aeropuerto-origen-na/vy2b-zbv7)
+        - [Google Trends](https://trends.google.com/trends/explore?q=Carnaval+Barranquilla&geo=CO)
+        - [Barranquilla en cifras](https://www.barranquilla.gov.co/gerencia-de-ciudad/barranquilla-en-cifras)
+        """
+    )
+    st.markdown("</div>", unsafe_allow_html=True)
+
     st.markdown("<div class='section-card'>", unsafe_allow_html=True)
     st.subheader("Vista general del dataset")
     st.dataframe(df, use_container_width=True)
@@ -165,50 +193,92 @@ with tab2:
     st.markdown("</div>", unsafe_allow_html=True)
 
     st.markdown("<div class='section-card'>", unsafe_allow_html=True)
-    st.subheader("Explicación de variables")
-    variables = pd.DataFrame(
-        {
-            "Variable": [
-                "año", "pax_feb", "pax_enero", "pax_dic_anterior", "pax_promedio_año",
-                "efecto_carnaval", "tendencia_anual", "trends_dic_ant", "trends_ene",
-                "visitantes_carnaval", "crecimiento_pax_yoy", "momentum_trends",
-                "ratio_visitantes_pax", "gasto_normalizado"
-            ],
-            "Tipo": [
-                "Temporal", "Numérica", "Numérica", "Numérica", "Numérica",
-                "Derivada", "Derivada", "Digital", "Digital",
-                "Económica", "Derivada", "Derivada",
-                "Derivada", "Económica"
-            ],
-            "Descripción": [
-                "Año de análisis de la edición del Carnaval.",
-                "Número de pasajeros registrados en febrero, mes asociado al Carnaval.",
-                "Número de pasajeros en enero, usado como referencia previa al evento.",
-                "Pasajeros de diciembre del año anterior, útil como señal de cierre de ciclo turístico.",
-                "Promedio mensual de pasajeros del año, usado como línea base comparativa.",
-                "Razón entre pasajeros de febrero y el promedio anual; aproxima la intensidad relativa del Carnaval.",
-                "Indicador de comportamiento o dirección general del flujo de pasajeros durante el año.",
-                "Índice de búsquedas en Google Trends en diciembre previo al Carnaval.",
-                "Índice de búsquedas en Google Trends en enero, inmediatamente antes del evento.",
-                "Estimación de visitantes al Carnaval en cada año.",
-                "Crecimiento interanual del flujo de pasajeros respecto al año anterior.",
-                "Cambio reciente del interés digital entre periodos cercanos.",
-                "Relación entre visitantes del Carnaval y pasajeros de febrero.",
-                "Variable económica transformada para facilitar comparación entre años."
-            ]
-        }
-    )
+    st.subheader("Variables del dataset y feature engineering")
+
+    variables = pd.DataFrame({
+        "Variable": [
+            "pax_feb",
+            "pax_enero",
+            "pax_dic_anterior",
+            "pax_promedio_año",
+            "efecto_carnaval",
+            "tendencia_anual",
+            "trends_dic_ant",
+            "trends_ene",
+            "visitantes_carnaval",
+            "crecimiento_pax_yoy",
+            "momentum_trends",
+            "ratio_visitantes_pax",
+            "gasto_normalizado",
+            "nivel_impacto"
+        ],
+        "Fuente": [
+            "Aerocivil",
+            "Aerocivil",
+            "Aerocivil",
+            "Aerocivil",
+            "Feature Engineering",
+            "Feature Engineering",
+            "Google Trends",
+            "Google Trends",
+            "Carnaval S.A.S.",
+            "Feature Engineering",
+            "Feature Engineering",
+            "Feature Engineering",
+            "Feature Engineering",
+            "Generada por K-Means"
+        ],
+        "Tipo": [
+            "Numérica",
+            "Numérica",
+            "Numérica",
+            "Numérica",
+            "Numérica",
+            "Numérica",
+            "Numérica",
+            "Numérica",
+            "Numérica",
+            "Numérica",
+            "Numérica",
+            "Numérica",
+            "Numérica",
+            "Categórica"
+        ],
+        "Descripción": [
+            "Pasajeros llegados a Barranquilla en febrero; base para generar Y.",
+            "Pasajeros en enero; contexto del mes previo al Carnaval.",
+            "Pasajeros en diciembre del año anterior; tendencia de fin de año.",
+            "Promedio mensual de pasajeros del año; nivel base.",
+            "pax_feb / pax_promedio_año; cuánto sube el Carnaval sobre lo normal del año.",
+            "(Q4 - Q1) / Q1 × 100; indica si el sector venía creciendo durante el año.",
+            "Índice de búsqueda en diciembre anterior (0–100).",
+            "Índice de búsqueda en enero (0–100).",
+            "Total de visitantes a la edición del Carnaval.",
+            "pax_feb / pax_feb_año_anterior - 1; momentum interanual del Carnaval.",
+            "trends_ene / trends_dic_ant; velocidad de aceleración del interés en Google.",
+            "visitantes / pax_feb; proporción de visitantes que llegan por tierra vs aire.",
+            "gasto_prom_cop / pax_promedio_año; gasto ajustado por tamaño del mercado.",
+            "Variable objetivo Y: ALTO / MEDIO / BAJO."
+        ]
+    })
+
     st.dataframe(variables, use_container_width=True, hide_index=True)
     st.markdown("</div>", unsafe_allow_html=True)
 
     st.markdown("<div class='section-card'>", unsafe_allow_html=True)
-    st.subheader("Interpretación analítica")
+    st.subheader("Nota metodológica")
     st.write(
-        "Las variables del dataset combinan tres dimensiones: movilidad turística, interés digital y contexto económico. "
-        "Esto permite que el análisis no se limite a observar un solo indicador, sino que incorpore señales complementarias para entender mejor las diferencias entre ediciones del Carnaval."
+        "Las variables marcadas como 'Feature Engineering' no existían de forma directa en las fuentes originales. "
+        "Fueron construidas a partir de variables crudas para aportar más información al modelo y mejorar su capacidad explicativa."
     )
     st.write(
-        "Las variables derivadas, como efecto_carnaval o crecimiento_pax_yoy, fueron construidas para mejorar la capacidad explicativa de la base y preparar el terreno para los modelos posteriores."
+        "Las variables efecto_carnaval y tendencia_anual corresponden a un feature engineering básico realizado durante la "
+        "consolidación del dataset. Las variables crecimiento_pax_yoy, momentum_trends, ratio_visitantes_pax y gasto_normalizado "
+        "corresponden a un feature engineering más avanzado."
+    )
+    st.write(
+        "Adicionalmente, dos variables originales fueron eliminadas por multicolinealidad: trends_feb, por su alta correlación "
+        "con efecto_carnaval (r=0.94), y gasto_prom_cop, por su alta correlación con visitantes_carnaval (r=0.99)."
     )
     st.markdown("</div>", unsafe_allow_html=True)
 
