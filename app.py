@@ -85,16 +85,6 @@ c1.metric("Años analizados", int(df["año"].nunique()))
 c2.metric("Máx. pasajeros en febrero", f"{int(df['pax_feb'].max()):,}".replace(",", "."))
 c3.metric("Variables del dataset", df.shape[1])
 
-st.markdown(
-    """
-    <div class="highlight">
-        Esta app presenta un primer producto funcional del proyecto final. Se prioriza la comprensión del problema,
-        la trazabilidad de los datos y el análisis exploratorio como base para los módulos posteriores de modelado.
-    </div>
-    """,
-    unsafe_allow_html=True,
-)
-
 # ========= TABS =========
 tab1, tab2, tab3, tab4, tab5 = st.tabs([
     "🏠 Presentación",
