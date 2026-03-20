@@ -68,7 +68,7 @@ df = load_data()
 st.markdown(
     """
     <div class="hero">
-        <h1 style="margin-bottom:0.3rem;">🎭 Carnaval de Barranquilla: analítica del impacto turístico</h1>
+        <h1 style="margin-bottom:0.3rem;">Carnaval de Barranquilla: analítica del impacto turístico</h1>
         <p style="font-size:1.08rem; margin-bottom:0.35rem;">
             Análisis del comportamiento histórico del Carnaval de Barranquilla mediante técnicas de exploración,
             segmentación y predicción del impacto turístico.
