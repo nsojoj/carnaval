@@ -95,7 +95,7 @@ tab1, tab2, tab3, tab4, tab5 = st.tabs([
 
 with tab1:
     st.markdown("<div class='section-card'>", unsafe_allow_html=True)
-    st.subheader("1.1 Contexto")
+    st.subheader("Contexto")
     st.write(
         "El Carnaval de Barranquilla es uno de los eventos culturales, turísticos y económicos más importantes de Colombia. "
         "Además de ser una de las celebraciones más emblemáticas del país, fue declarado Patrimonio Oral e Inmaterial "
@@ -120,7 +120,7 @@ with tab1:
     st.markdown("</div>", unsafe_allow_html=True)
 
     st.markdown("<div class='section-card'>", unsafe_allow_html=True)
-    st.subheader("1.2 Objetivo del estudio")
+    st.subheader("Objetivo del estudio")
     st.write(
         "Desarrollar un pipeline de clustering + clasificación que permita analizar históricamente las ediciones del Carnaval "
         "de Barranquilla entre 2017 y 2025 y predecir si el Carnaval 2027 tendrá un nivel de impacto turístico ALTO, MEDIO o BAJO."
@@ -141,7 +141,7 @@ with tab1:
     st.markdown("</div>", unsafe_allow_html=True)
 
     st.markdown("<div class='section-card'>", unsafe_allow_html=True)
-    st.subheader("1.3 Pregunta de investigación")
+    st.subheader("Pregunta de investigación")
     st.markdown(
         """
         > **¿Es posible identificar patrones históricos en el flujo turístico del Carnaval de Barranquilla (2017–2025) y predecir si el Carnaval 2027 tendrá un nivel de impacto turístico ALTO, MEDIO o BAJO?**
@@ -155,7 +155,7 @@ with tab1:
 
 with tab2:
     st.markdown("<div class='section-card'>", unsafe_allow_html=True)
-    st.subheader("1.4 Fuentes de datos")
+    st.subheader("Fuentes de datos")
     st.write(
         "La base final del proyecto fue construida mediante la integración de tres fuentes públicas que representan dimensiones distintas "
         "del fenómeno analizado: movilidad turística, interés digital y contexto económico. Esta combinación permite construir una visión "
