@@ -75,10 +75,11 @@ def format_number(x):
 def load_data():
     df = pd.read_csv("dataset_final_carnaval_fe-6.csv")
 
+    # Ajuste del nombre usado en el notebook
     if "trends_ene_co" in df.columns:
         df = df.rename(columns={"trends_ene_co": "trends_ene"})
 
-    # Variables auxiliares usadas en el trabajo
+    # Variables agregadas manualmente en el notebook
     new_cols_data = {
         "año": [2013, 2014, 2015, 2016, 2017, 2018, 2019, 2020, 2021, 2022, 2023, 2024, 2025],
         "pax_enero": [14000, 15000, 16000, 17000, 17894, 12446, 16433, 17923, 17312, 22000, 25000, 27000, 29000],
@@ -95,29 +96,40 @@ def load_data():
         if col_name != "año":
             df_indexed[col_name] = pd.Series(data_list, index=new_cols_data["año"])
 
+    # Derivadas del notebook
     df_indexed["gasto_normalizado"] = df_indexed["gasto_prom_cop"] / 10000
-    df_indexed["efecto_carnaval"] = df_indexed["pax_feb"] / df_indexed["pax_promedio_año"]
+    df = df_indexed.reset_index()
+    df["efecto_carnaval"] = df["pax_feb"] / df["pax_promedio_año"]
 
-    return df_indexed.reset_index()
+    return df
 
 
 @st.cache_data
 def prepare_model_outputs(df):
     df_model = df.copy()
 
-    # ---------- CLUSTERING ----------
-    numerical_cols = df_model.select_dtypes(include=["number"]).columns
+    # ========= CLUSTERING =========
+    df_clustering = df_model.copy()
+    numerical_cols = df_clustering.select_dtypes(include=["number"]).columns
+
     cols_to_exclude = [
-        "año", "cluster", "cluster_kmeans", "nivel_impacto_encoded",
+        "año",
+        "cluster",
+        "cluster_kmeans",
+        "nivel_impacto_encoded",
+        "cluster_k3",
+        "cluster_k4",
         "cluster_jerarquico"
     ]
+
     features_for_scaling = [col for col in numerical_cols if col not in cols_to_exclude]
-    df_scaled_input = df_model[features_for_scaling]
+    df_clustering_numerical = df_clustering[features_for_scaling]
 
     scaler_cluster = StandardScaler()
-    df_scaled_array = scaler_cluster.fit_transform(df_scaled_input)
-    df_scaled = pd.DataFrame(df_scaled_array, columns=df_scaled_input.columns)
+    df_scaled_array = scaler_cluster.fit_transform(df_clustering_numerical)
+    df_scaled = pd.DataFrame(df_scaled_array, columns=df_clustering_numerical.columns)
 
+    # Elbow + silhouette
     inertia_values = []
     silhouette_scores = []
     max_clusters = len(df_scaled) - 1
@@ -126,24 +138,32 @@ def prepare_model_outputs(df):
         kmeans = KMeans(n_clusters=k, random_state=42, n_init=10)
         kmeans.fit(df_scaled)
         inertia_values.append(kmeans.inertia_)
+
         if k > 1:
-            silhouette_scores.append({"k": k, "score": silhouette_score(df_scaled, kmeans.labels_)})
+            silhouette_scores.append({
+                "k": k,
+                "score": silhouette_score(df_scaled, kmeans.labels_)
+            })
 
     silhouette_df = pd.DataFrame(silhouette_scores)
 
     # KMeans k=4
-    kmeans_k4 = KMeans(n_clusters=4, random_state=42, n_init=10)
-    df_model["cluster"] = kmeans_k4.fit_predict(df_scaled)
+    kmeans_4 = KMeans(n_clusters=4, random_state=42, n_init=10)
+    kmeans_4.fit(df_scaled)
+    df_model["cluster"] = kmeans_4.labels_
 
+    # PCA para visualización
     pca = PCA(n_components=2)
     pca_components = pca.fit_transform(df_scaled)
-    df_pca_clusters = pd.DataFrame(pca_components, columns=["PC1", "PC2"])
-    df_pca_clusters["año"] = df_model["año"].values
-    df_pca_clusters["cluster"] = df_model["cluster"].values
+    df_pca_clusters = pd.DataFrame(data=pca_components, columns=["PC1", "PC2"])
+    df_pca_clusters["año"] = df_model["año"]
+    df_pca_clusters["cluster"] = df_model["cluster"]
 
-    # KMeans k=3 -> variable objetivo
-    kmeans_k3 = KMeans(n_clusters=3, random_state=42, n_init=10)
-    df_model["cluster_kmeans"] = kmeans_k3.fit_predict(df_scaled)
+    cluster_means_k4 = df_model.groupby("cluster").mean(numeric_only=True)
+
+    # KMeans k=3 para nivel de impacto
+    kmeans_3 = KMeans(n_clusters=3, random_state=42, n_init=10)
+    df_model["cluster_kmeans"] = kmeans_3.fit_predict(df_scaled)
 
     medias = df_model.groupby("cluster_kmeans")["pax_feb"].mean().sort_values()
     mapa_etiquetas = {
@@ -154,28 +174,36 @@ def prepare_model_outputs(df):
     df_model["nivel_impacto"] = df_model["cluster_kmeans"].map(mapa_etiquetas)
 
     # HAC
-    linked_data = linkage(df_scaled, method="ward")
-    df_model["cluster_jerarquico"] = fcluster(linked_data, 4, criterion="maxclust")
+    df_scaled_for_hac = df_scaled.drop(columns=["cluster", "cluster_kmeans", "nivel_impacto"], errors="ignore")
+    linked_data = linkage(df_scaled_for_hac, method="ward")
+    hierarchical_clusters = fcluster(linked_data, 4, criterion="maxclust")
+    df_model["cluster_jerarquico"] = hierarchical_clusters
 
-    cluster_means_k4 = df_model.groupby("cluster").mean(numeric_only=True)
-    cluster_means_hac = df_model.groupby("cluster_jerarquico").mean(numeric_only=True)
+    cluster_means_hac = df_model.drop(
+        columns=["cluster", "cluster_kmeans", "nivel_impacto"],
+        errors="ignore"
+    ).groupby("cluster_jerarquico").mean(numeric_only=True)
 
-    # ---------- CLASIFICACIÓN ----------
+    # ========= CLASIFICACIÓN =========
     encoder = LabelEncoder()
     df_model["nivel_impacto_encoded"] = encoder.fit_transform(df_model["nivel_impacto"])
 
     exclude_cols = ["año", "cluster", "cluster_kmeans", "cluster_jerarquico", "nivel_impacto_encoded"]
-    X_cols = [col for col in df_model.select_dtypes(include=["int64", "float64"]).columns if col not in exclude_cols]
+    numerical_cols = df_model.select_dtypes(include=["int64", "float64"]).columns.tolist()
+    X_cols = [col for col in numerical_cols if col not in exclude_cols]
     X = df_model[X_cols]
     y = df_model["nivel_impacto_encoded"]
 
-    rf_model_importance = RandomForestClassifier(n_estimators=100, random_state=42)
-    rf_model_importance.fit(X, y)
+    # Importancia de variables
+    rf_model = RandomForestClassifier(n_estimators=100, random_state=42)
+    rf_model.fit(X, y)
+
     feature_importance_df = pd.DataFrame({
         "Feature": X.columns,
-        "Importance": rf_model_importance.feature_importances_
+        "Importance": rf_model.feature_importances_
     }).sort_values(by="Importance", ascending=False)
 
+    # Train / test como en el notebook
     X_train, X_test, y_train, y_test = train_test_split(
         X, y, test_size=0.3, random_state=42
     )
@@ -183,14 +211,21 @@ def prepare_model_outputs(df):
     reverse_map = {0: "ALTO", 1: "BAJO", 2: "MEDIO"}
     all_labels = sorted(y_train.unique())
 
-    log_reg_model = LogisticRegression(random_state=42, solver="liblinear", max_iter=1000)
+    # Logistic Regression (corregido)
+    log_reg_model = LogisticRegression(
+        random_state=42,
+        solver="liblinear",
+        max_iter=1000
+    )
     log_reg_model.fit(X_train, y_train)
     y_pred_log_reg = log_reg_model.predict(X_test)
 
+    # Decision Tree
     decision_tree_model = DecisionTreeClassifier(random_state=42)
     decision_tree_model.fit(X_train, y_train)
     y_pred_decision_tree = decision_tree_model.predict(X_test)
 
+    # Random Forest
     random_forest_model = RandomForestClassifier(random_state=42)
     random_forest_model.fit(X_train, y_train)
     y_pred_random_forest = random_forest_model.predict(X_test)
@@ -217,44 +252,35 @@ def prepare_model_outputs(df):
     else:
         best_model = random_forest_model
 
-    # Predicción 2027
+    # ========= PREDICCIÓN 2027 =========
     datos_2027_unscaled = pd.DataFrame({
         "pax_feb": [22000],
-        "crecimiento_pax_yoy": [0.25],
-        "visitantes_carnaval": [700000],
-        "gasto_prom_cop": [900000],
-        "ratio_visitantes_pax": [33.0],
-        "ocup_hotel_feb": [95.0],
-        "trm_feb_usdcop": [4300],
-        "tur_int_colombia_miles": [4200],
-        "trends_ene": [20],
         "pax_enero": [28000],
         "pax_dic_anterior": [22000],
         "pax_promedio_año": [23000],
+        "efecto_carnaval": [0.95],
         "tendencia_anual": [-10.0],
         "trends_dic_ant": [6],
+        "trends_ene": [20],
+        "visitantes_carnaval": [700000],
+        "crecimiento_pax_yoy": [0.25],
         "momentum_trends": [3.5],
-        "gasto_normalizado": [90.0],
-        "efecto_carnaval": [0.95]
-    })
-
-    datos_2027_unscaled = datos_2027_unscaled[X.columns]
+        "ratio_visitantes_pax": [33.0],
+        "gasto_normalizado": [90.0]
+    }, columns=X_train.columns)
 
     scaler_prediction = StandardScaler()
     scaler_prediction.fit(X)
-    datos_2027_scaled = pd.DataFrame(
-        scaler_prediction.transform(datos_2027_unscaled),
-        columns=X.columns
-    )
+
+    datos_2027_scaled_array = scaler_prediction.transform(datos_2027_unscaled)
+    datos_2027_scaled = pd.DataFrame(datos_2027_scaled_array, columns=X.columns)
 
     pred_clase_encoded = best_model.predict(datos_2027_scaled)
     pred_proba = best_model.predict_proba(datos_2027_scaled)
-    pred_clase = reverse_map[pred_clase_encoded[0]]
 
-    proba_df = pd.DataFrame(
-        pred_proba,
-        columns=[reverse_map[i] for i in best_model.classes_]
-    ).T
+    pred_clase = [reverse_map[i] for i in pred_clase_encoded]
+    model_classes = best_model.classes_
+    proba_df = pd.DataFrame(pred_proba, columns=[reverse_map[i] for i in model_classes]).T
     proba_df.columns = ["Probabilidad"]
     proba_df = proba_df.sort_values(by="Probabilidad", ascending=False)
 
@@ -264,13 +290,13 @@ def prepare_model_outputs(df):
         "silhouette_df": silhouette_df,
         "inertia_values": inertia_values,
         "df_pca_clusters": df_pca_clusters,
-        "linked_data": linked_data,
         "cluster_means_k4": cluster_means_k4,
+        "linked_data": linked_data,
         "cluster_means_hac": cluster_means_hac,
         "feature_importance_df": feature_importance_df,
         "model_results": model_results,
         "best_model_name": best_model_name,
-        "pred_clase": pred_clase,
+        "pred_clase": pred_clase[0],
         "proba_df": proba_df,
         "y_test": y_test,
         "y_pred_log_reg": y_pred_log_reg,
@@ -285,7 +311,7 @@ df = load_data()
 outputs = prepare_model_outputs(df)
 df_model = outputs["df_model"]
 
-# ---------- HEADER ----------
+# ========= HERO =========
 st.markdown(
     """
     <div class="hero">
@@ -308,7 +334,7 @@ c3.metric("Variables del dataset base", 10)
 st.markdown(
     """
     <div class="highlight">
-        El objetivo es anticipar si una edición del Carnaval puede clasificarse como de impacto
+        Este proyecto busca anticipar si una edición del Carnaval puede clasificarse como de impacto
         ALTO, MEDIO o BAJO antes de que el evento ocurra.
     </div>
     """,
@@ -332,25 +358,26 @@ with tab1:
         "En 2025 generó más de **$880.000 millones**, alrededor de **193.000 empleos** y cerca de **800.000 visitantes**."
     )
     st.write(
-        "El reto para actores como Alcaldía, hoteleros, organizadores, comerciantes y aerolíneas es tomar decisiones costosas meses antes del evento, cuando aún no se conoce su magnitud final."
+        "El reto para actores como Alcaldía, hoteleros, organizadores, comerciantes y aerolíneas es tomar decisiones meses antes del evento, "
+        "sin conocer todavía su magnitud final."
     )
     st.write(
-        "Este proyecto propone apoyar esa planeación con datos, usando un pipeline de **clustering + clasificación** que permita entender patrones históricos y anticipar niveles de impacto."
+        "Este proyecto propone apoyar esa planeación con datos, mediante un pipeline de **clustering + clasificación**."
     )
     st.markdown("</div>", unsafe_allow_html=True)
 
     st.markdown("<div class='section-card'>", unsafe_allow_html=True)
-    st.subheader("Objetivo y pregunta")
-    st.write(
-        "El objetivo es identificar patrones históricos del Carnaval y predecir si una futura edición tendrá un impacto **ALTO, MEDIO o BAJO**."
-    )
+    st.subheader("Pregunta y objetivo")
     st.markdown(
         """
-        > **¿Podemos anticipar el nivel de impacto turístico del Carnaval antes de que comience, usando señales turísticas, macroeconómicas y digitales observables previamente?**
+        > **¿Podemos predecir si un Carnaval será ALTO, MEDIO o BAJO antes de que comience, usando señales turísticas, macroeconómicas y digitales observables previamente?**
         """
     )
     st.write(
-        "El periodo analizado comienza en 2013, año a partir del cual el aeropuerto BAQ entra en una nueva escala operativa y la comparación histórica se vuelve más consistente."
+        "El objetivo es identificar patrones históricos del Carnaval y construir un modelo que permita anticipar niveles de impacto turístico."
+    )
+    st.write(
+        "El análisis inicia en 2013 porque antes de ese punto el aeropuerto BAQ operaba en otra escala, lo que afecta la comparabilidad histórica."
     )
     st.markdown("</div>", unsafe_allow_html=True)
 
@@ -379,8 +406,7 @@ with tab2:
     })
     st.dataframe(fuentes, use_container_width=True, hide_index=True)
     st.write(
-        "La base integra múltiples fuentes y combina datos reales, oficiales y estimados. "
-        "Los años 2013–2016 requirieron reconstrucción parcial para visitantes, gasto y ocupación hotelera."
+        "La base integra fuentes reales, oficiales y estimadas. Los años 2013–2016 requirieron reconstrucción parcial para variables como visitantes, gasto y ocupación hotelera."
     )
     st.markdown("</div>", unsafe_allow_html=True)
 
@@ -406,7 +432,7 @@ with tab2:
     })
     st.dataframe(variables, use_container_width=True, hide_index=True)
     st.write(
-        "Además, se construyeron variables auxiliares para análisis y modelado, entre ellas `efecto_carnaval`, `pax_promedio_año`, `momentum_trends` y `gasto_normalizado`."
+        "Además del dataset base, el notebook añadió variables auxiliares para análisis y modelado: `pax_enero`, `pax_dic_anterior`, `pax_promedio_año`, `efecto_carnaval`, `tendencia_anual`, `trends_dic_ant`, `momentum_trends` y `gasto_normalizado`."
     )
     st.markdown("</div>", unsafe_allow_html=True)
 
@@ -414,7 +440,7 @@ with tab3:
     st.markdown("<div class='section-card'>", unsafe_allow_html=True)
     st.subheader("Q - Question")
     st.write(
-        "La misión analítica fue determinar si existen patrones históricos de desempeño turístico y si es posible anticipar el nivel de impacto del Carnaval con variables previas al evento."
+        "La misión analítica fue determinar si existen patrones históricos de desempeño turístico y si es posible anticipar el impacto del Carnaval usando información previa al evento."
     )
     st.markdown(
         """
@@ -422,7 +448,7 @@ with tab3:
         - ¿Existen grupos naturales de años?
         - ¿Qué variables distinguen mejor los niveles de impacto?
         - ¿Se puede predecir el nivel con información previa?
-        - ¿Qué tan confiable es la predicción con n=13?
+        - ¿Qué tan confiable es con n=13?
         - ¿Qué podría esperarse para 2027?
         """
     )
@@ -434,7 +460,7 @@ with tab3:
         st.success("El dataset no presenta valores faltantes.")
     st.dataframe(df.describe().T, use_container_width=True)
     st.write(
-        "La auditoría confirma una base completa y coherente, pero estadísticamente heterogénea: 2021 aparece como outlier estructural y ciertas variables reflejan choques operativos o macroeconómicos."
+        "La auditoría confirma una base completa y coherente, aunque estadísticamente heterogénea: 2021 aparece como outlier estructural y varias variables reflejan choques específicos."
     )
     st.markdown("</div>", unsafe_allow_html=True)
 
@@ -457,7 +483,7 @@ with tab3:
     st.pyplot(fig_corr)
 
     st.write(
-        "El análisis univariado y de correlación muestra alta variabilidad en el sistema turístico, una relación fuerte entre visitantes, ocupación y gasto, y menor poder explicativo de señales como Google Trends."
+        "El análisis univariado y de correlación muestra alta variabilidad en el sistema turístico, relaciones fuertes entre visitantes, ocupación y gasto, y menor capacidad explicativa de Google Trends."
     )
     st.markdown("</div>", unsafe_allow_html=True)
 
@@ -526,7 +552,7 @@ with tab3:
         axes[1].set_xticklabels(df_gasto["año"], rotation=45)
         st.pyplot(fig_h34)
 
-        st.write("H3 y H4 confirmadas: existe recuperación post-pandemia y crecimiento económico del Carnaval.")
+        st.write("H3 y H4 confirmadas: existe recuperación post-pandemia y crecimiento del gasto turístico.")
 
     with subtabs[2]:
         fig_h67, axes = plt.subplots(1, 2, figsize=(14, 5))
@@ -602,7 +628,7 @@ with tab4:
 
     st.dataframe(outputs["cluster_means_k4"], use_container_width=True)
     st.write(
-        "Los clusters permiten diferenciar un bloque pre-pandemia, una transición, un outlier pandémico y una recuperación post-pandemia."
+        "Los clusters distinguen etapas históricas del Carnaval: periodo pre-pandemia, transición, outlier pandémico y recuperación post-pandemia."
     )
     st.markdown("</div>", unsafe_allow_html=True)
 
@@ -622,8 +648,8 @@ with tab4:
     st.pyplot(fig_imp)
 
     st.write(
-        "Los resultados muestran mejor desempeño de Árbol de Decisión y Random Forest en esta corrida. "
-        "Aun así, por el tamaño de muestra, las métricas deben leerse como evidencia exploratoria."
+        "Las métricas muestran mejor desempeño de Árbol de Decisión y Random Forest en esta corrida. "
+        "Aun así, deben interpretarse con cautela por el tamaño de muestra."
     )
     st.markdown("</div>", unsafe_allow_html=True)
 
@@ -642,7 +668,7 @@ with tab5:
     st.pyplot(fig_pred)
 
     st.write(
-        "La predicción para 2027 debe interpretarse como un ejercicio de escenarios, no como una proyección definitiva."
+        "La predicción debe entenderse como un ejercicio exploratorio. En el propio notebook se advierte que, por tamaño de muestra, no constituye una inferencia robusta."
     )
     st.markdown("</div>", unsafe_allow_html=True)
 
@@ -659,7 +685,7 @@ with tab6:
         """
     )
     st.write(
-        "El principal valor del proyecto está en traducir un problema real de planeación en una herramienta basada en datos, integrando múltiples fuentes y una lógica de análisis explicable."
+        "El principal valor del proyecto está en traducir un problema real de planeación en una herramienta basada en datos."
     )
     st.markdown("</div>", unsafe_allow_html=True)
 
