@@ -572,48 +572,38 @@ with tab2:
     st.markdown("</div>", unsafe_allow_html=True)
 
 with tab3:
+with tab3:
     st.markdown("<div class='section-card'>", unsafe_allow_html=True)
     st.subheader("Q - Question: misión analítica")
     st.write(
-        "En la metodología QUEST, el análisis no comienza con una gráfica, sino con una pregunta de negocio y una misión analítica concreta. "
-        "En este caso, la misión fue identificar si el comportamiento turístico del Carnaval presenta patrones históricos segmentables y si es posible "
-        "anticipar el nivel de impacto antes de que el evento ocurra."
+        "Bajo la metodología QUEST, el análisis comienza con una misión analítica clara: "
+        "entender si el Carnaval presenta patrones históricos distinguibles y si es posible anticipar su nivel de impacto antes del evento."
     )
+
     preguntas_df = pd.DataFrame({
-        "Preguntas que debe responder el análisis": [
+        "Preguntas clave": [
             "¿Existen grupos naturales de años según su desempeño turístico?",
             "¿Qué variables distinguen mejor un Carnaval ALTO de uno MEDIO?",
             "¿Es posible predecir el nivel con variables disponibles antes del evento?",
-            "¿Qué tan confiable es esa predicción con solo 13 observaciones?",
-            "¿Qué le espera al Carnaval 2027?"
+            "¿Qué tan confiable es la predicción con solo 13 observaciones?",
+            "¿Qué podría esperarse para el Carnaval 2027?"
         ]
     })
     st.dataframe(preguntas_df, use_container_width=True, hide_index=True)
 
-    criterios_df = pd.DataFrame({
-        "Criterio": ["Mínimo", "Objetivo", "Excelente", "Interpretabilidad"],
-        "Definición": [
-            "Accuracy LOO >= 80% en al menos dos algoritmos",
-            "Accuracy LOO >= 85% promedio",
-            "Accuracy LOO >= 90% en al menos uno",
-            "Explicable a un alcalde en 2 minutos"
-        ]
-    })
-    st.dataframe(criterios_df, use_container_width=True, hide_index=True)
-
-    st.write(
-        "Desde el inicio también se reconocieron restricciones importantes: solo hay **13 ediciones** comparables, 2021 es un año de cancelación, "
-        "parte de la serie temprana es estimada y el modelo debe construirse con variables útiles antes del evento. "
-        "Estas restricciones no invalidan el ejercicio, pero sí obligan a interpretar con prudencia cualquier resultado predictivo."
+    st.markdown(
+        """
+        **Restricciones del análisis**
+        - Solo 13 observaciones (2013–2025)
+        - 2021 fue un Carnaval cancelado
+        - Parte de la serie temprana fue estimada
+        - El modelo debe usar variables disponibles antes del evento
+        """
     )
     st.markdown("</div>", unsafe_allow_html=True)
 
     st.markdown("<div class='section-card'>", unsafe_allow_html=True)
-    st.subheader("U - Understand: auditoría de los datos")
-    st.write(
-        "Antes de explorar relaciones, se auditó la estructura y calidad del dataset. El objetivo fue identificar valores faltantes, variables con comportamiento irregular "
-        "y posibles limitaciones heredadas de la construcción de la base."
-    )
+    st.subheader("U - Understand: auditoría del dataset")
 
     missing_percentages = df.isnull().sum() / len(df) * 100
     missing_percentages = missing_percentages[missing_percentages > 0]
@@ -622,10 +612,10 @@ with tab3:
         st.success("No se identificaron valores faltantes: el dataset está completo al 100%.")
     else:
         missing_df = missing_percentages.reset_index()
-        missing_df.columns = ["Variable", "Porcentaje de Nulos"]
-        fig_missing, ax_missing = plt.subplots(figsize=(12, 6))
-        sns.barplot(x="Porcentaje de Nulos", y="Variable", data=missing_df, palette="viridis", ax=ax_missing)
-        ax_missing.set_title("Porcentaje de valores faltantes por variable")
+        missing_df.columns = ["Variable", "Porcentaje de nulos"]
+        fig_missing, ax_missing = plt.subplots(figsize=(10, 5))
+        sns.barplot(x="Porcentaje de nulos", y="Variable", data=missing_df, palette="viridis", ax=ax_missing)
+        ax_missing.set_title("Valores faltantes por variable")
         ax_missing.grid(axis="x", linestyle="--", alpha=0.7)
         st.pyplot(fig_missing)
 
@@ -633,381 +623,400 @@ with tab3:
 
     st.markdown(
         """
-        **Hallazgos clave de auditoría**
-        1. `visitantes_carnaval`: outlier extremo en 2021 (valor 0, COVID).  
-        2. `crecimiento_pax_yoy`: valor muy negativo en 2018 (remodelación del aeropuerto).  
-        3. `trm_feb_usdcop`: tendencia creciente clara, sin outliers, refleja macroeconomía.  
-        4. `trends_ene`: distribución irregular por normalización de Google Trends.  
-        5. Sin valores faltantes: dataset completo al 100%.
+        **Hallazgos principales**
+        1. `visitantes_carnaval` tiene un outlier extremo en 2021 por COVID.  
+        2. `crecimiento_pax_yoy` presenta una caída fuerte en 2018 por la remodelación del aeropuerto.  
+        3. `trm_feb_usdcop` muestra una tendencia creciente estable.  
+        4. `trends_ene` presenta comportamiento irregular por la normalización de Google Trends.  
+        5. No hay valores faltantes.
         """
-    )
-    st.write(
-        "La auditoría confirma que el dataset es usable y coherente, pero no homogéneo en el sentido estadístico: varios indicadores están atravesados por choques estructurales, "
-        "en particular la pandemia y ciertos eventos operativos del aeropuerto. Esto anticipa la presencia de asimetrías y outliers que luego efectivamente se observan en la exploración."
     )
     st.markdown("</div>", unsafe_allow_html=True)
 
     st.markdown("<div class='section-card'>", unsafe_allow_html=True)
-    st.subheader("E - Explore: perfilado univariado")
-    st.write(
-        "En esta etapa se analizaron las variables individualmente para detectar dispersión, estabilidad, asimetrías y comportamiento temporal. "
-        "La idea no es solo ver su forma estadística, sino entender qué cuentan sobre la dinámica del Carnaval."
-    )
+    st.subheader("E - Explore: análisis univariado")
 
     numeric_cols = df.select_dtypes(include=np.number).columns.tolist()
-    selected_col = st.selectbox("Selecciona una variable para ver su histograma y boxplot", numeric_cols)
+    selected_col = st.selectbox("Selecciona una variable", numeric_cols)
 
-    fig_dist, axes = plt.subplots(1, 2, figsize=(14, 5))
-    fig_dist.suptitle(f"Distribution of {selected_col}", fontsize=16)
-
+    fig_dist, axes = plt.subplots(1, 2, figsize=(13, 4.5))
     sns.histplot(df[selected_col], kde=True, ax=axes[0])
-    axes[0].set_title(f"Histogram of {selected_col}")
-    axes[0].set_xlabel(selected_col)
-    axes[0].set_ylabel("Frequency")
-
+    axes[0].set_title(f"Histograma de {selected_col}")
     sns.boxplot(y=df[selected_col], ax=axes[1])
-    axes[1].set_title(f"Boxplot of {selected_col}")
-    axes[1].set_ylabel(selected_col)
-
+    axes[1].set_title(f"Boxplot de {selected_col}")
     st.pyplot(fig_dist)
 
     st.write(
-        "El análisis univariado confirma una estructura general estable, pero con alta variabilidad en los indicadores turísticos. "
-        "Variables como **pax_feb**, **visitantes_carnaval** y **ocup_hotel_feb** muestran rangos amplios pero relativamente consistentes; "
-        "por el contrario, **crecimiento_pax_yoy** evidencia gran inestabilidad, con años de expansión y contracción pronunciada."
-    )
-    st.write(
-        "También se observan asimetrías importantes en **gasto_prom_cop** y **ratio_visitantes_pax**, especialmente alrededor de periodos de disrupción. "
-        "En conjunto, esto refuerza la idea de que la dinámica del turismo asociado al Carnaval no sigue una distribución normal simple, sino que combina regularidad estructural con choques específicos."
-    )
-    st.markdown(
-        """
-        **Lecturas puntuales destacadas del EDA**
-        - **TRM (dólar):** es la variable más equilibrada; se mueve de manera relativamente ordenada y sin saltos aberrantes.
-        - **Turismo internacional:** presenta tendencia positiva, pero incluye un valor atípico muy bajo en pandemia.
-        - **Google Trends:** concentra valores en un rango relativamente acotado y su comportamiento depende de la normalización del índice.
-        - **Conclusión univariada:** el turismo es la dimensión más sensible a choques, mientras las variables macro muestran trayectorias más limpias.
-        """
+        "El perfilado univariado muestra una estructura general estable, pero con alta variabilidad en los indicadores turísticos. "
+        "`pax_feb`, `visitantes_carnaval` y `ocup_hotel_feb` conservan patrones relativamente consistentes, "
+        "mientras que `crecimiento_pax_yoy`, `gasto_prom_cop` y `ratio_visitantes_pax` reflejan mayor inestabilidad y sensibilidad a choques."
     )
     st.markdown("</div>", unsafe_allow_html=True)
 
     st.markdown("<div class='section-card'>", unsafe_allow_html=True)
     st.subheader("Correlación entre variables")
     corr = df.select_dtypes(include=np.number).corr()
-    fig_corr, ax_corr = plt.subplots(figsize=(14, 10))
+    fig_corr, ax_corr = plt.subplots(figsize=(12, 8))
     sns.heatmap(corr, annot=True, cmap="coolwarm", fmt=".2f", linewidths=.5, ax=ax_corr)
-    ax_corr.set_title("Correlation Matrix of Numerical Variables", fontsize=16)
+    ax_corr.set_title("Matriz de correlación")
     st.pyplot(fig_corr)
 
     st.write(
-        "La matriz de correlación muestra un núcleo fuerte de variables interrelacionadas en torno al comportamiento económico-turístico del Carnaval. "
-        "En especial, **gasto_prom_cop**, **ocup_hotel_feb** y **visitantes_carnaval** presentan asociaciones altas, lo que sugiere que mayor afluencia de turistas "
-        "empuja simultáneamente el gasto y la demanda hotelera."
-    )
-    st.write(
-        "También destaca el papel de **tur_int_colombia_miles**, que parece actuar como contexto externo favorable al desempeño del Carnaval. "
-        "En contraste, **crecimiento_pax_yoy** presenta correlaciones más débiles y **trends_ene** muestra relaciones bajas o incluso negativas con algunas variables, "
-        "lo que sugiere una desconexión parcial entre la señal digital y la dinámica turística efectiva."
+        "La matriz de correlación evidencia un núcleo fuerte de variables económicas y turísticas interrelacionadas, "
+        "especialmente entre `gasto_prom_cop`, `ocup_hotel_feb`, `visitantes_carnaval` y `tur_int_colombia_miles`. "
+        "En contraste, `trends_ene` y `crecimiento_pax_yoy` muestran menor capacidad explicativa."
     )
     st.markdown("</div>", unsafe_allow_html=True)
 
     st.markdown("<div class='section-card'>", unsafe_allow_html=True)
-    st.subheader("S - Study: hipótesis, análisis bivariado y descubrimiento")
+    st.subheader("S - Study: hipótesis y resultados principales")
+
     hip_df = pd.DataFrame({
-        "#": ["H1", "H2", "H3", "H4", "H5", "H6", "H7", "H8", "H9", "H10"],
         "Hipótesis": [
-            "El flujo de pasajeros en febrero es significativamente mayor que el promedio del año",
-            "El interés en Google en enero predice el flujo de pasajeros en febrero",
-            "Los años post-pandemia tienen mayor flujo que los pre-pandemia",
-            "El gasto promedio del turista ha crecido sostenidamente cada año",
-            "Existen al menos 3 grupos claramente diferenciados de ediciones del Carnaval",
-            "A mayor interés en Google, mayor gasto promedio del turista",
-            "Existe relación entre el flujo de turistas y el gasto promedio",
-            "El Carnaval presenta un cambio estructural después de la pandemia",
-            "El flujo de pasajeros en febrero presenta una tendencia creciente en el tiempo",
-            "Existen valores atípicos en años específicos"
+            "H1. Febrero supera el promedio anual de pasajeros",
+            "H2. Google Trends predice pasajeros de febrero",
+            "H3. Los años post-pandemia superan a los pre-pandemia",
+            "H4. El gasto promedio crece de forma sostenida",
+            "H6. Google Trends se relaciona con el gasto",
+            "H7. Pasajeros y gasto están relacionados",
+            "H8. Existe ruptura estructural post-pandemia",
+            "H9. Hay tendencia creciente del flujo",
+            "H10. Existen valores atípicos"
         ],
-        "Resultado esperado": [
-            "Febrero > promedio anual",
-            "Relación positiva",
-            "Post > Pre",
-            "Tendencia creciente",
-            "3 segmentos identificables",
-            "Relación positiva",
-            "Relación positiva",
-            "Ruptura en tendencia",
-            "Tendencia creciente",
-            "Identificación de anomalías"
+        "Resultado": [
+            "Confirmada",
+            "Rechazada",
+            "Confirmada",
+            "Confirmada",
+            "Rechazada",
+            "Confirmada",
+            "Confirmada",
+            "Confirmada",
+            "Confirmada"
         ]
     })
     st.dataframe(hip_df, use_container_width=True, hide_index=True)
-    st.markdown("</div>", unsafe_allow_html=True)
 
-    subtabs = st.tabs(["H1-H2", "H3-H4", "H6-H7", "H8-H10"])
+    htabs = st.tabs(["H1-H2", "H3-H4", "H6-H7", "H8-H10"])
 
-    with subtabs[0]:
-        st.markdown("<div class='section-card'>", unsafe_allow_html=True)
-        st.subheader("H1. Pasajeros de febrero vs promedio anual")
+    with htabs[0]:
         fig_h1, axes = plt.subplots(1, 2, figsize=(14, 5))
-
         x = np.arange(len(df))
         w = 0.35
-        axes[0].bar(x - w/2, df["pax_feb"], width=w, label="Febrero (Carnaval)", color="#E74C3C", alpha=0.85)
-        axes[0].bar(x + w/2, df["pax_promedio_año"], width=w, label="Promedio del año", color="#3498DB", alpha=0.85)
+
+        axes[0].bar(x - w/2, df["pax_feb"], width=w, label="Febrero", color="#E74C3C", alpha=0.85)
+        axes[0].bar(x + w/2, df["pax_promedio_año"], width=w, label="Promedio año", color="#3498DB", alpha=0.85)
         axes[0].set_xticks(x)
         axes[0].set_xticklabels(df["año"], rotation=45)
-        axes[0].set_title("Pasajeros febrero vs promedio anual\n(Verificación H1)")
-        axes[0].set_ylabel("Pasajeros")
-        axes[0].yaxis.set_major_formatter(mticker.FuncFormatter(lambda v, _: f"{v:,.0f}"))
+        axes[0].set_title("H1: pax_feb vs promedio anual")
         axes[0].legend()
-        if 2020 in df["año"].values:
-            idx_2020 = df.index[df["año"] == 2020][0]
-            axes[0].annotate(
-                "COVID\n2020",
-                xy=(idx_2020, df.loc[df["año"] == 2020, "pax_promedio_año"].values[0]),
-                xytext=(idx_2020, 5000),
-                ha="center",
-                fontsize=8,
-                color="gray",
-                arrowprops=dict(arrowstyle="->", color="gray", lw=0.8)
-            )
 
-        colores_barra = ["#E74C3C" if e > 1 else "#3498DB" for e in df["efecto_carnaval"]]
-        axes[1].bar(df["año"], df["efecto_carnaval"], color=colores_barra, alpha=0.85)
-        axes[1].axhline(y=1, color="black", linestyle="--", linewidth=1.2, label="Sin efecto (ratio=1)")
-        axes[1].set_title("Efecto Carnaval por año\n(pax_feb / pax_promedio_año)")
-        axes[1].set_ylabel("Ratio")
+        axes[1].bar(df["año"], df["efecto_carnaval"], color="#F39C12")
+        axes[1].axhline(y=1, color="black", linestyle="--")
+        axes[1].set_title("Efecto Carnaval")
         axes[1].set_xticks(df["año"])
         axes[1].set_xticklabels(df["año"], rotation=45)
-        axes[1].legend()
-        for año, ef in zip(df["año"], df["efecto_carnaval"]):
-            axes[1].text(año, ef + 0.03, f"{ef:.2f}", ha="center", fontsize=8)
-
         st.pyplot(fig_h1)
-
-        efecto_promedio = df["efecto_carnaval"].mean()
-        st.write(
-            f"La hipótesis **H1 se confirma**. En promedio, febrero se sitúa en **{efecto_promedio:.2f} veces** el nivel base del año, lo que valida que el Carnaval introduce una intensificación turística real."
-        )
-        st.write(
-            "La excepción visual más fuerte es 2020, donde el efecto Carnaval fue particularmente alto antes de que la pandemia alterara el sistema. "
-            "Este hallazgo es importante porque justifica tratar febrero como mes núcleo del análisis."
-        )
-        st.markdown("</div>", unsafe_allow_html=True)
-
-        st.markdown("<div class='section-card'>", unsafe_allow_html=True)
-        st.subheader("H2. Google Trends enero vs flujo de pasajeros en febrero")
-        fig_h2, ax_h2 = plt.subplots(figsize=(10, 6))
-        sns.scatterplot(x="trends_ene", y="pax_feb", data=df, s=100, hue="año", palette="viridis", ax=ax_h2)
-        ax_h2.set_title("Interés en Google en Enero vs. Flujo de Pasajeros en Febrero (H2)")
-        ax_h2.set_xlabel("Interés en Google (trends_ene)")
-        ax_h2.set_ylabel("Pasajeros en Febrero (pax_feb)")
-        ax_h2.grid(True, linestyle="--", alpha=0.7)
-        for i in range(len(df)):
-            ax_h2.text(df["trends_ene"].iloc[i] + 0.5, df["pax_feb"].iloc[i], str(df["año"].iloc[i]), fontsize=9)
-        st.pyplot(fig_h2)
 
         corr_h2 = df["trends_ene"].corr(df["pax_feb"])
         st.write(
-            f"La hipótesis **H2 se rechaza**. La correlación observada es de **{corr_h2:.2f}**, valor cercano a cero. "
-            "Esto indica que el interés de búsqueda en enero no predice de forma robusta el flujo real de pasajeros en febrero."
+            f"**H1 confirmada:** febrero supera sistemáticamente el nivel promedio del año. "
+            f"**H2 rechazada:** la correlación entre `trends_ene` y `pax_feb` es **{corr_h2:.2f}**, lo que indica una relación débil."
         )
-        st.write(
-            "Este resultado es particularmente valioso porque rompe una intuición común: más búsquedas no significan necesariamente más visitantes. "
-            "En este caso, Google Trends parece capturar atención, pero no comportamiento turístico efectivo."
-        )
-        st.markdown("</div>", unsafe_allow_html=True)
 
-    with subtabs[1]:
-        st.markdown("<div class='section-card'>", unsafe_allow_html=True)
-        st.subheader("H3. Recuperación post-pandemia y H4. crecimiento del gasto")
-        fig_h34, axes = plt.subplots(1, 2, figsize=(15, 7))
-
-        colores_vis = ["#E74C3C" if a in [2021] else ("#F39C12" if a == 2020 else "#2ECC71") for a in df["año"]]
-        axes[0].bar(df["año"], df["visitantes_carnaval"], color=colores_vis, alpha=0.85)
-        axes[0].set_title("Visitantes totales al Carnaval\n(H3 — crecimiento post-pandemia)")
-        axes[0].set_ylabel("Visitantes")
+    with htabs[1]:
+        fig_h34, axes = plt.subplots(1, 2, figsize=(14, 5))
+        axes[0].bar(df["año"], df["visitantes_carnaval"], color="#2ECC71")
+        axes[0].set_title("H3: visitantes del Carnaval")
         axes[0].set_xticks(df["año"])
         axes[0].set_xticklabels(df["año"], rotation=45)
-        axes[0].yaxis.set_major_formatter(mticker.FuncFormatter(lambda v, _: f"{v/1000:.0f}K"))
-        for año, vis in zip(df["año"], df["visitantes_carnaval"]):
-            if vis > 0:
-                axes[0].text(año, vis + 5000, f"{vis/1000:.0f}K", ha="center", fontsize=8)
-        axes[0].annotate(
-            "Cancelado", xy=(2021, 0), xytext=(2021, 30000),
-            ha="center", fontsize=8, color="#E74C3C",
-            arrowprops=dict(arrowstyle="->", color="#E74C3C", lw=0.8)
-        )
 
         df_gasto = df[df["gasto_normalizado"] > 0]
-        axes[1].plot(
-            df_gasto["año"], df_gasto["gasto_normalizado"] / 1e6,
-            marker="o", color="#E67E22", linewidth=2.5, markersize=8
-        )
-        axes[1].fill_between(df_gasto["año"], df_gasto["gasto_normalizado"] / 1e6, alpha=0.15, color="#E67E22")
-        axes[1].set_title("Gasto promedio del turista (millones COP)\n(H4 — crecimiento sostenido)")
-        axes[1].set_ylabel("Millones COP")
+        axes[1].plot(df_gasto["año"], df_gasto["gasto_normalizado"], marker="o", color="#E67E22")
+        axes[1].set_title("H4: tendencia del gasto")
         axes[1].set_xticks(df_gasto["año"])
         axes[1].set_xticklabels(df_gasto["año"], rotation=45)
-        axes[1].grid(axis="y", alpha=0.3)
-        for año, gasto in zip(df_gasto["año"], df_gasto["gasto_normalizado"]):
-            axes[1].text(año, gasto/1e6 + 0.03, f"${gasto/1e6:.1f}M", ha="center", fontsize=8)
-
         st.pyplot(fig_h34)
 
-        crecimiento_h3 = (df.loc[df["año"] == 2025, "visitantes_carnaval"].values[0] / df.loc[df["año"] == 2022, "visitantes_carnaval"].values[0] - 1) * 100
-        crecimiento_h4 = (df.loc[df["año"] == 2025, "gasto_normalizado"].values[0] / df.loc[df["año"] == 2013, "gasto_normalizado"].values[0] - 1) * 100
+        st.write(
+            "El bloque H3-H4 muestra recuperación post-pandemia y crecimiento del gasto turístico. "
+            "Esto sugiere que la expansión reciente del Carnaval no es solo en volumen, sino también en intensidad económica."
+        )
 
-        st.write(
-            f"**H3 confirmada:** entre 2022 y 2025 los visitantes crecieron aproximadamente **{crecimiento_h3:.1f}%**, evidenciando una recuperación fuerte del Carnaval posterior a la pandemia."
-        )
-        st.write(
-            f"**H4 confirmada:** el gasto promedio muestra una trayectoria creciente de largo plazo, con un aumento aproximado de **{crecimiento_h4:.1f}%** entre 2013 y 2025."
-        )
-        st.write(
-            "Ambas hipótesis, vistas en conjunto, muestran que el Carnaval no solo se recuperó en volumen de visitantes, sino también en capacidad de movilizar gasto económico por turista."
-        )
-        st.markdown("</div>", unsafe_allow_html=True)
+    with htabs[2]:
+        fig_h67, axes = plt.subplots(1, 2, figsize=(14, 5))
 
-    with subtabs[2]:
-        st.markdown("<div class='section-card'>", unsafe_allow_html=True)
-        st.subheader("H6. Google Trends vs gasto")
-        fig_h6, ax_h6 = plt.subplots(figsize=(10, 6))
-        sns.scatterplot(x="trends_ene", y="gasto_normalizado", data=df, s=100, hue="año", palette="viridis", ax=ax_h6)
-        ax_h6.set_title("Interés en Google en Enero vs. Gasto Normalizado (H6)")
-        ax_h6.set_xlabel("Interés en Google (trends_ene)")
-        ax_h6.set_ylabel("Gasto Normalizado")
-        ax_h6.grid(True, linestyle="--", alpha=0.7)
-        for i in range(len(df)):
-            ax_h6.text(df["trends_ene"].iloc[i] + 0.5, df["gasto_normalizado"].iloc[i], str(df["año"].iloc[i]), fontsize=9)
-        st.pyplot(fig_h6)
+        sns.scatterplot(x="trends_ene", y="gasto_normalizado", data=df, ax=axes[0], color="#6a4c93")
+        axes[0].set_title("H6: Trends vs gasto")
+
+        sns.scatterplot(x="pax_feb", y="gasto_normalizado", data=df, ax=axes[1], color="#fb8500")
+        axes[1].set_title("H7: pasajeros vs gasto")
+
+        st.pyplot(fig_h67)
 
         corr_h6 = df["trends_ene"].corr(df["gasto_normalizado"])
-        st.write(
-            f"La hipótesis **H6 se rechaza**. La correlación es **{corr_h6:.2f}**, lo que indica una relación débil o nula entre el interés digital y el gasto promedio."
-        )
-        st.write(
-            "Esto sugiere que la señal de búsqueda previa no captura adecuadamente la capacidad de gasto del turista. "
-            "En otras palabras, la atención digital no se traduce automáticamente en mayor derrama económica."
-        )
-        st.markdown("</div>", unsafe_allow_html=True)
-
-        st.markdown("<div class='section-card'>", unsafe_allow_html=True)
-        st.subheader("H7. Flujo de pasajeros vs gasto turístico")
-        fig_h7, ax_h7 = plt.subplots(figsize=(10, 6))
-        sns.scatterplot(x="pax_feb", y="gasto_normalizado", data=df, s=100, hue="año", palette="viridis", ax=ax_h7)
-        ax_h7.set_title("Flujo de Pasajeros en Febrero vs. Gasto Normalizado (H7)")
-        ax_h7.set_xlabel("Pasajeros en Febrero (pax_feb)")
-        ax_h7.set_ylabel("Gasto Normalizado")
-        ax_h7.grid(True, linestyle="--", alpha=0.7)
-        for i in range(len(df)):
-            ax_h7.text(df["pax_feb"].iloc[i] + 0.5, df["gasto_normalizado"].iloc[i], str(df["año"].iloc[i]), fontsize=9)
-        st.pyplot(fig_h7)
-
         corr_h7 = df["pax_feb"].corr(df["gasto_normalizado"])
+
         st.write(
-            f"La hipótesis **H7 se confirma**. La correlación entre flujo de pasajeros y gasto es de **{corr_h7:.2f}**, una asociación positiva moderada a fuerte."
+            f"**H6 rechazada:** `trends_ene` y gasto tienen una relación débil (**r = {corr_h6:.2f}**). "
+            f"**H7 confirmada:** pasajeros y gasto presentan asociación positiva (**r = {corr_h7:.2f}**)."
         )
-        st.write(
-            "Esto significa que el aumento en el volumen de turistas se relaciona directamente con una mayor capacidad de gasto, reforzando la conexión entre demanda y dinamismo económico."
-        )
-        st.markdown("</div>", unsafe_allow_html=True)
 
-    with subtabs[3]:
-        st.markdown("<div class='section-card'>", unsafe_allow_html=True)
-        st.subheader("H8. Cambio estructural post-pandemia")
-        fig_h8, axes = plt.subplots(3, 1, figsize=(12, 18), sharex=True)
-        fig_h8.suptitle("Análisis de Cambio Estructural Post-Pandemia (H8)", fontsize=16)
+    with htabs[3]:
+        fig_h8, axes = plt.subplots(1, 2, figsize=(14, 5))
 
-        sns.lineplot(x="año", y="pax_feb", data=df, marker="o", color="skyblue", ax=axes[0])
-        sns.scatterplot(x="año", y="pax_feb", data=df, s=100, hue="año", palette="viridis", legend=False, ax=axes[0])
-        axes[0].set_title("Flujo de Pasajeros en Febrero (pax_feb)")
-        axes[0].set_ylabel("Pasajeros en Febrero")
-        axes[0].grid(True, linestyle="--", alpha=0.7)
-        axes[0].axvspan(2019.5, 2021.5, color="red", alpha=0.15)
-        axes[0].text(2020.5, axes[0].get_ylim()[1] * 0.9, "Pandemia", horizontalalignment="center", color="red", fontsize=10)
+        sns.lineplot(x="año", y="pax_feb", data=df, marker="o", color="#28B463", ax=axes[0])
+        axes[0].axvspan(2019.5, 2021.5, color="red", alpha=0.12)
+        axes[0].set_title("H8-H9: cambio estructural y tendencia")
 
-        sns.lineplot(x="año", y="visitantes_carnaval", data=df, marker="o", color="lightcoral", ax=axes[1])
-        sns.scatterplot(x="año", y="visitantes_carnaval", data=df, s=100, hue="año", palette="viridis", legend=False, ax=axes[1])
-        axes[1].set_title("Visitantes al Carnaval")
-        axes[1].set_ylabel("Número de Visitantes")
-        axes[1].grid(True, linestyle="--", alpha=0.7)
-        axes[1].axvspan(2019.5, 2021.5, color="red", alpha=0.15)
-        axes[1].text(2020.5, axes[1].get_ylim()[1] * 0.9, "Pandemia", horizontalalignment="center", color="red", fontsize=10)
-
-        sns.lineplot(x="año", y="gasto_normalizado", data=df, marker="o", color="lightgreen", ax=axes[2])
-        sns.scatterplot(x="año", y="gasto_normalizado", data=df, s=100, hue="año", palette="viridis", legend=False, ax=axes[2])
-        axes[2].set_title("Gasto Normalizado del Turista")
-        axes[2].set_ylabel("Gasto Normalizado")
-        axes[2].set_xlabel("Año")
-        axes[2].grid(True, linestyle="--", alpha=0.7)
-        axes[2].axvspan(2019.5, 2021.5, color="red", alpha=0.15)
-        axes[2].text(2020.5, axes[2].get_ylim()[1] * 0.9, "Pandemia", horizontalalignment="center", color="red", fontsize=10)
+        sns.boxplot(y=df["visitantes_carnaval"], ax=axes[1], color="lightcoral")
+        axes[1].set_title("H10: outliers en visitantes")
 
         st.pyplot(fig_h8)
 
-        st.write(
-            "La hipótesis **H8 se confirma**. Existe una ruptura estructural evidente entre 2020 y 2021, seguida de un proceso de recuperación. "
-            "La pandemia no fue una simple oscilación, sino un quiebre del patrón histórico del Carnaval."
-        )
-        st.markdown("</div>", unsafe_allow_html=True)
-
-        st.markdown("<div class='section-card'>", unsafe_allow_html=True)
-        st.subheader("H9. Tendencia del flujo de pasajeros")
-        fig_h9, ax_h9 = plt.subplots(figsize=(10, 6))
-        sns.lineplot(x="año", y="pax_feb", data=df, marker="o", color="#28B463", ax=ax_h9)
-        sns.scatterplot(x="año", y="pax_feb", data=df, s=100, hue="año", palette="viridis", legend=False, ax=ax_h9)
-        ax_h9.set_title("Tendencia del Flujo de Pasajeros en Febrero a lo largo del Tiempo (H9)")
-        ax_h9.set_xlabel("Año")
-        ax_h9.set_ylabel("Pasajeros en Febrero (pax_feb)")
-        ax_h9.grid(True, linestyle="--", alpha=0.7)
-        ax_h9.set_xticks(df["año"])
-        for i in range(len(df)):
-            ax_h9.text(df["año"].iloc[i], df["pax_feb"].iloc[i] + 500, str(df["año"].iloc[i]), ha="center", fontsize=9)
-        st.pyplot(fig_h9)
-
         slope, intercept, r_value, p_value, std_err = linregress(df["año"], df["pax_feb"])
         st.write(
-            f"La hipótesis **H9 se confirma**. La pendiente estimada es **{slope:.2f}**, con **p = {p_value:.3f}** y **R² = {r_value**2:.2f}**. "
-            "Esto indica una tendencia creciente estadísticamente significativa del flujo de pasajeros en febrero."
+            f"**H8 confirmada:** la pandemia introduce una ruptura estructural. "
+            f"**H9 confirmada:** la pendiente de la tendencia de pasajeros es **{slope:.2f}** con **p = {p_value:.3f}**. "
+            "**H10 confirmada:** 2021 aparece como outlier estructural."
         )
-        st.markdown("</div>", unsafe_allow_html=True)
 
-        st.markdown("<div class='section-card'>", unsafe_allow_html=True)
-        st.subheader("H10. Detección de valores atípicos")
-        columns_for_outliers = ["pax_feb", "visitantes_carnaval", "gasto_normalizado"]
-        fig_h10, axes = plt.subplots(1, len(columns_for_outliers), figsize=(15, 6))
-        for i, col in enumerate(columns_for_outliers):
-            sns.boxplot(y=df[col], color="lightcoral", ax=axes[i])
-            sns.stripplot(y=df[col], x=df["año"], jitter=True, color="black", size=5, ax=axes[i])
-            axes[i].set_title(f"Boxplot de {col}")
-            axes[i].set_ylabel(col)
-            axes[i].set_xlabel("Año")
-            axes[i].tick_params(axis="x", rotation=45)
-            axes[i].grid(True, linestyle="--", alpha=0.7)
-        st.pyplot(fig_h10)
-
-        st.write(
-            "La hipótesis **H10 se confirma**. El año 2021 aparece como outlier estructural en múltiples variables: flujo, visitantes y gasto. "
-            "No es ruido estadístico, sino la marca de una disrupción real del sistema."
-        )
-        st.markdown("</div>", unsafe_allow_html=True)
+    st.markdown("</div>", unsafe_allow_html=True)
 
     st.markdown("<div class='section-card'>", unsafe_allow_html=True)
-    st.subheader("T - Tell: hallazgos ejecutivos del QUEST")
+    st.subheader("T - Tell: hallazgos ejecutivos")
     st.markdown(
         """
-        1. **Crecimiento estructural:** el Carnaval más que duplicó/triplicó su escala turística entre 2013 y 2025.  
-        2. **La TRM emerge como variable estratégica:** cuando el peso se debilita, Colombia se vuelve más atractiva para visitantes extranjeros.  
-        3. **Los hoteles no mienten:** la ocupación hotelera refleja de forma muy limpia la intensidad real del Carnaval.  
-        4. **COVID 2021 es un outlier estructural, no una tendencia.**  
-        5. **Google Trends ofrece un hallazgo contraintuitivo:** más búsquedas no significan necesariamente más visitantes.  
-        6. **Existe sustento empírico para avanzar al modelado:** las hipótesis confirmadas permiten justificar clustering y clasificación.
+        1. El Carnaval presenta crecimiento estructural de largo plazo.  
+        2. La TRM emerge como una variable estratégica del contexto.  
+        3. La ocupación hotelera refleja con claridad la intensidad del evento.  
+        4. 2021 debe tratarse como outlier estructural, no como tendencia.  
+        5. Google Trends aporta una señal limitada y contraintuitiva.  
+        6. El EDA justifica avanzar a clustering y clasificación.
         """
     )
     st.write(
-        "En conjunto, el QUEST deja una base interpretativa robusta: el Carnaval es un sistema turístico con crecimiento de largo plazo, "
-        "interrupciones fuertes ante choques exógenos y una estructura suficientemente heterogénea como para justificar su segmentación en grupos y su posterior modelado predictivo."
+        "La lectura integrada del QUEST muestra que el Carnaval combina crecimiento, choques externos y heterogeneidad suficiente entre años. "
+        "Eso justifica tanto la segmentación histórica como la construcción de un modelo predictivo exploratorio."
+    )
+    st.markdown("</div>", unsafe_allow_html=True)
+
+with tab4:
+    st.markdown("<div class='section-card'>", unsafe_allow_html=True)
+    st.subheader("Determinación del número óptimo de clusters")
+    fig_elbow, axes = plt.subplots(1, 2, figsize=(12, 5))
+
+    max_clusters = len(outputs["df_scaled"]) - 1
+    axes[0].plot(range(1, max_clusters + 1), outputs["inertia_values"], marker="o", linestyle="--")
+    axes[0].set_xlabel("Number of Clusters (K)")
+    axes[0].set_ylabel("Inertia")
+    axes[0].set_title("Elbow Method for Optimal K")
+    axes[0].grid(True)
+
+    sil_df = outputs["silhouette_df"]
+    axes[1].plot(sil_df["k"], sil_df["score"], marker="o", linestyle="--")
+    axes[1].set_xlabel("Number of Clusters (K)")
+    axes[1].set_ylabel("Silhouette Score")
+    axes[1].set_title("Silhouette Score for Optimal K")
+    axes[1].grid(True)
+
+    st.pyplot(fig_elbow)
+
+    st.write(
+        "El método del codo sugiere una zona plausible entre 4 y 6 grupos, mientras que la silueta señala que k=3 y k=4 son soluciones razonables. "
+        "En el notebook se prioriza k=4 para descripción histórica y k=3 para la construcción de la variable objetivo."
+    )
+    st.markdown("</div>", unsafe_allow_html=True)
+
+    st.markdown("<div class='section-card'>", unsafe_allow_html=True)
+    st.subheader("K-Means (k=4) con PCA")
+    fig_pca, ax_pca = plt.subplots(figsize=(12, 8))
+    sns.scatterplot(
+        x="PC1",
+        y="PC2",
+        hue="cluster",
+        size="año",
+        sizes=(50, 400),
+        palette="viridis",
+        data=outputs["df_pca_clusters"],
+        legend="full",
+        ax=ax_pca
+    )
+    for _, row in outputs["df_pca_clusters"].iterrows():
+        ax_pca.text(row["PC1"] + 0.1, row["PC2"] + 0.1, str(row["año"]), fontsize=9)
+    ax_pca.set_title("Clusters of Carnival Editions (PCA)", fontsize=16)
+    ax_pca.grid(True, linestyle="--", alpha=0.6)
+    st.pyplot(fig_pca)
+
+    st.dataframe(outputs["cluster_means_k4"], use_container_width=True)
+    st.write(
+        "La solución de 4 clusters separa con bastante claridad el periodo pre-pandemia temprano, la transición 2018–2020, "
+        "el año extremo 2021 y la recuperación post-pandemia. Esto aporta una lectura histórica interpretable del sistema."
+    )
+    st.markdown("</div>", unsafe_allow_html=True)
+
+    st.markdown("<div class='section-card'>", unsafe_allow_html=True)
+    st.subheader("K-Means (k=3) y variable objetivo")
+    fig_compare, axes = plt.subplots(1, 2, figsize=(15, 6))
+
+    sns.scatterplot(
+        x="año", y="nivel_impacto", hue="nivel_impacto",
+        data=df_model, palette="viridis", s=100, ax=axes[0]
+    )
+    axes[0].set_title("K-Means Clustering (k=3)")
+    axes[0].grid(True, linestyle="--", alpha=0.7)
+
+    sns.scatterplot(
+        x="año", y="cluster", hue="cluster",
+        data=df_model, palette="viridis", s=100, ax=axes[1]
+    )
+    axes[1].set_title("K-Means Clustering (k=4)")
+    axes[1].grid(True, linestyle="--", alpha=0.7)
+
+    st.pyplot(fig_compare)
+
+    st.dataframe(df_model[["año", "pax_feb", "efecto_carnaval", "nivel_impacto"]], use_container_width=True, hide_index=True)
+
+    st.write(
+        "La variable `nivel_impacto` surge del clustering con k=3 y se etiqueta como BAJO, MEDIO y ALTO según el promedio de `pax_feb`. "
+        "Este paso conecta el descubrimiento no supervisado con la etapa de clasificación supervisada."
+    )
+    st.markdown("</div>", unsafe_allow_html=True)
+
+    st.markdown("<div class='section-card'>", unsafe_allow_html=True)
+    st.subheader("Clustering jerárquico")
+    fig_dendro, ax_dendro = plt.subplots(figsize=(15, 8))
+    dendrogram(
+        outputs["linked_data"],
+        orientation="top",
+        labels=df_model["año"].values.astype(str),
+        distance_sort="descending",
+        show_leaf_counts=True,
+        ax=ax_dendro
+    )
+    ax_dendro.set_title("Dendrograma de Clustering Jerárquico para Años del Carnaval")
+    ax_dendro.set_xlabel("Año del Carnaval")
+    ax_dendro.set_ylabel("Distancia Euclidiana (Ward)")
+    ax_dendro.axhline(y=3.5, color="r", linestyle="--", label="Corte para 3 clusters")
+    ax_dendro.axhline(y=2.0, color="g", linestyle="--", label="Corte para 4 clusters")
+    ax_dendro.legend()
+    st.pyplot(fig_dendro)
+
+    st.dataframe(outputs["cluster_means_hac"], use_container_width=True)
+    st.write(
+        "El clustering jerárquico refuerza la existencia de grupos diferenciados y confirma que 2021 queda aislado como observación singular."
+    )
+    st.markdown("</div>", unsafe_allow_html=True)
+
+    st.markdown("<div class='section-card'>", unsafe_allow_html=True)
+    st.subheader("Importancia de variables")
+    fig_imp, ax_imp = plt.subplots(figsize=(12, 7))
+    sns.barplot(
+        x="Importance",
+        y="Feature",
+        data=outputs["feature_importance_df"],
+        palette="viridis",
+        ax=ax_imp
+    )
+    ax_imp.set_title("Importancia de Variables para Predecir el Nivel de Impacto del Carnaval (Random Forest)")
+    ax_imp.grid(axis="x", linestyle="--", alpha=0.7)
+    st.pyplot(fig_imp)
+
+    st.write(
+        "La jerarquía de importancia sugiere que el modelo se apoya en una combinación de factores turísticos, macroeconómicos y estructurales. "
+        "No existe una única variable mágica, sino un sistema de señales."
+    )
+    st.markdown("</div>", unsafe_allow_html=True)
+
+    st.markdown("<div class='section-card'>", unsafe_allow_html=True)
+    st.subheader("Evaluación de modelos")
+    st.dataframe(outputs["model_results"].round(2), use_container_width=True)
+    st.write(
+        "El split usado en el notebook favorece a Árbol de Decisión y Random Forest frente a Regresión Logística. "
+        "Aun así, debe recordarse que con n=13 las métricas son sensibles a cualquier partición."
+    )
+
+    cm_tabs = st.tabs(["Logistic Regression", "Decision Tree", "Random Forest"])
+
+    def plot_cm(y_true, y_pred, labels, reverse_map, title):
+        fig, ax = plt.subplots(figsize=(5, 4))
+        cm = confusion_matrix(y_true, y_pred, labels=labels)
+        tick_labels = [reverse_map[i] for i in labels]
+        sns.heatmap(cm, annot=True, fmt="d", cmap="Blues", xticklabels=tick_labels, yticklabels=tick_labels, ax=ax)
+        ax.set_title(title)
+        ax.set_xlabel("Predicho")
+        ax.set_ylabel("Real")
+        st.pyplot(fig)
+
+    with cm_tabs[0]:
+        plot_cm(outputs["y_test"], outputs["y_pred_log_reg"], outputs["all_labels"], outputs["reverse_map"], "Matriz de confusión - Logistic Regression")
+    with cm_tabs[1]:
+        plot_cm(outputs["y_test"], outputs["y_pred_decision_tree"], outputs["all_labels"], outputs["reverse_map"], "Matriz de confusión - Decision Tree")
+    with cm_tabs[2]:
+        plot_cm(outputs["y_test"], outputs["y_pred_random_forest"], outputs["all_labels"], outputs["reverse_map"], "Matriz de confusión - Random Forest")
+    st.markdown("</div>", unsafe_allow_html=True)
+
+with tab5:
+    st.markdown("<div class='section-card'>", unsafe_allow_html=True)
+    st.subheader("Predicción exploratoria para 2027")
+    st.write(
+        f"Según el notebook, el mejor modelo en esta corrida fue **{outputs['best_model_name']}**. "
+        f"Con los datos hipotéticos definidos para 2027, el nivel predicho es **{outputs['pred_clase']}**."
+    )
+
+    c1, c2 = st.columns([1, 2])
+    with c1:
+        st.metric("Nivel de impacto predicho", outputs["pred_clase"])
+    with c2:
+        st.write(
+            "Esta salida no debe interpretarse como pronóstico definitivo, sino como una demostración del pipeline. "
+            "La muestra es pequeña y la predicción depende de supuestos hipotéticos."
+        )
+
+    fig_pred, ax_pred = plt.subplots(figsize=(8, 6))
+    colors = ["#6a4c93", "#fb8500", "#d62828"][:len(outputs["proba_df"])]
+    ax_pred.bar(outputs["proba_df"].index, outputs["proba_df"]["Probabilidad"], color=colors)
+    ax_pred.set_title(f"Predicciones para 2027 ({outputs['best_model_name']})")
+    ax_pred.set_xlabel("Nivel de Impacto")
+    ax_pred.set_ylabel("Probabilidad")
+    ax_pred.set_ylim(0, 1)
+    for i, v in enumerate(outputs["proba_df"]["Probabilidad"].values):
+        ax_pred.text(i, v + 0.02, f"{v:.2f}", ha="center")
+    st.pyplot(fig_pred)
+
+    st.write(
+        "Más que afirmar una verdad cerrada sobre 2027, esta pestaña muestra cómo una organización podría convertir señales tempranas en una estimación formal de escenario."
+    )
+    st.markdown("</div>", unsafe_allow_html=True)
+
+with tab6:
+    st.markdown("<div class='section-card'>", unsafe_allow_html=True)
+    st.subheader("Conclusiones generales")
+    st.markdown(
+        """
+        - El Carnaval presenta crecimiento estructural de largo plazo.  
+        - 2021 debe tratarse como outlier estructural.  
+        - Las variables reales del sistema turístico explican mejor el impacto que las señales digitales aisladas.  
+        - Existen grupos históricos diferenciables de ediciones del Carnaval.  
+        - Es posible construir un modelo predictivo exploratorio, pero con cautela por el tamaño muestral.  
+        - El proyecto tiene valor práctico para stakeholders reales de la ciudad.
+        """
+    )
+    st.write(
+        "El principal aporte del trabajo no es solo la métrica final del modelo, sino la construcción de una base integrada, una narrativa analítica clara y un pipeline que traduce un problema de ciudad en una herramienta basada en datos."
+    )
+    st.markdown("</div>", unsafe_allow_html=True)
+
+    st.markdown("<div class='section-card'>", unsafe_allow_html=True)
+    st.subheader("Limitaciones")
+    st.markdown(
+        """
+        - n = 13 observaciones  
+        - Años tempranos parcialmente estimados  
+        - 2021 introduce una ruptura extrema  
+        - Algunas variables son útiles para EDA pero no para predicción anticipada  
+        - Las métricas deben interpretarse con prudencia
+        """
     )
     st.markdown("</div>", unsafe_allow_html=True)
 
