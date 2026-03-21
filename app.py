@@ -79,11 +79,9 @@ def format_number(x):
 def load_data():
     df = pd.read_csv("dataset_final_carnaval_fe-6.csv")
 
-    # Renombrar como en el notebook
     if "trends_ene_co" in df.columns:
         df = df.rename(columns={"trends_ene_co": "trends_ene"})
 
-    # Variables creadas manualmente en el notebook
     new_cols_data = {
         "año": [2013, 2014, 2015, 2016, 2017, 2018, 2019, 2020, 2021, 2022, 2023, 2024, 2025],
         "pax_enero": [14000, 15000, 16000, 17000, 17894, 12446, 16433, 17923, 17312, 22000, 25000, 27000, 29000],
@@ -100,7 +98,6 @@ def load_data():
         if col_name != "año":
             df_indexed[col_name] = pd.Series(data_list, index=new_cols_data["año"])
 
-    # Derivadas del notebook
     df_indexed["gasto_normalizado"] = df_indexed["gasto_prom_cop"] / 10000
     df_indexed["efecto_carnaval"] = df_indexed["pax_feb"] / df_indexed["pax_promedio_año"]
 
@@ -126,7 +123,6 @@ def prepare_model_outputs(df):
     df_scaled_array = scaler_cluster.fit_transform(df_clustering_numerical)
     df_scaled = pd.DataFrame(df_scaled_array, columns=df_clustering_numerical.columns)
 
-    # Elbow + silhouette
     inertia_values = []
     silhouette_scores = []
     max_clusters = len(df_scaled) - 1
@@ -141,7 +137,6 @@ def prepare_model_outputs(df):
 
     silhouette_df = pd.DataFrame(silhouette_scores)
 
-    # KMeans k=4
     kmeans_k4 = KMeans(n_clusters=4, random_state=42, n_init=10)
     df_model["cluster"] = kmeans_k4.fit_predict(df_scaled)
 
@@ -151,7 +146,6 @@ def prepare_model_outputs(df):
     df_pca_clusters["año"] = df_model["año"].values
     df_pca_clusters["cluster"] = df_model["cluster"].values
 
-    # KMeans k=3 para nivel de impacto
     kmeans_k3 = KMeans(n_clusters=3, random_state=42, n_init=10)
     df_model["cluster_kmeans"] = kmeans_k3.fit_predict(df_scaled)
 
@@ -163,12 +157,10 @@ def prepare_model_outputs(df):
     }
     df_model["nivel_impacto"] = df_model["cluster_kmeans"].map(mapa_etiquetas)
 
-    # HAC
     df_scaled_for_hac = df_scaled.drop(columns=["cluster", "cluster_kmeans", "nivel_impacto"], errors="ignore")
     linked_data = linkage(df_scaled_for_hac, method="ward")
     df_model["cluster_jerarquico"] = fcluster(linked_data, 4, criterion="maxclust")
 
-    # Medias de clusters
     cluster_means_k4 = df_model.drop(columns=["cluster_kmeans", "nivel_impacto"], errors="ignore").groupby("cluster").mean(numeric_only=True)
     cluster_means_hac = df_model.drop(columns=["cluster", "cluster_kmeans", "nivel_impacto"], errors="ignore").groupby("cluster_jerarquico").mean(numeric_only=True)
 
@@ -182,7 +174,6 @@ def prepare_model_outputs(df):
     X = df_model[X_cols]
     y = df_model["nivel_impacto_encoded"]
 
-    # Importancia de variables
     rf_model_importance = RandomForestClassifier(n_estimators=100, random_state=42)
     rf_model_importance.fit(X, y)
     feature_importance_df = pd.DataFrame({
@@ -190,7 +181,6 @@ def prepare_model_outputs(df):
         "Importance": rf_model_importance.feature_importances_
     }).sort_values(by="Importance", ascending=False)
 
-    # División train/test como en el notebook
     X_train, X_test, y_train, y_test = train_test_split(
         X, y, test_size=0.3, random_state=42
     )
@@ -198,17 +188,15 @@ def prepare_model_outputs(df):
     reverse_map = {0: "ALTO", 1: "BAJO", 2: "MEDIO"}
     all_labels = sorted(y_train.unique())
 
-    # Logistic Regression
-    log_reg_model = LogisticRegression(random_state=42, solver="liblinear", multi_class="auto")
+    # CORREGIDO AQUÍ
+    log_reg_model = LogisticRegression(random_state=42, solver="liblinear", max_iter=1000)
     log_reg_model.fit(X_train, y_train)
     y_pred_log_reg = log_reg_model.predict(X_test)
 
-    # Decision Tree
     decision_tree_model = DecisionTreeClassifier(random_state=42)
     decision_tree_model.fit(X_train, y_train)
     y_pred_decision_tree = decision_tree_model.predict(X_test)
 
-    # Random Forest
     random_forest_model = RandomForestClassifier(random_state=42)
     random_forest_model.fit(X_train, y_train)
     y_pred_random_forest = random_forest_model.predict(X_test)
@@ -235,7 +223,6 @@ def prepare_model_outputs(df):
     else:
         best_model = random_forest_model
 
-    # Datos hipotéticos 2027 como en notebook
     datos_2027_unscaled = pd.DataFrame({
         "pax_feb": [22000],
         "crecimiento_pax_yoy": [0.25],
@@ -305,7 +292,6 @@ outputs = prepare_model_outputs(df)
 
 df_model = outputs["df_model"]
 
-# ========= HERO =========
 st.markdown(
     """
     <div class="hero">
@@ -337,7 +323,6 @@ st.markdown(
     unsafe_allow_html=True,
 )
 
-# ========= TABS =========
 tab1, tab2, tab3, tab4, tab5, tab6 = st.tabs([
     "Presentación",
     "Datos y variables",
@@ -1226,7 +1211,8 @@ with tab5:
         )
 
     fig_pred, ax_pred = plt.subplots(figsize=(8, 6))
-    ax_pred.bar(outputs["proba_df"].index, outputs["proba_df"]["Probabilidad"], color=["#6a4c93", "#fb8500", "#d62828"][:len(outputs["proba_df"])])
+    colors = ["#6a4c93", "#fb8500", "#d62828"][:len(outputs["proba_df"])]
+    ax_pred.bar(outputs["proba_df"].index, outputs["proba_df"]["Probabilidad"], color=colors)
     ax_pred.set_title(f"Predicciones para 2027 ({outputs['best_model_name']})")
     ax_pred.set_xlabel("Nivel de Impacto")
     ax_pred.set_ylabel("Probabilidad")
