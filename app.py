@@ -626,7 +626,6 @@ with tab4:
     ax_pca.set_title("K-Means (k=4) con PCA")
     st.pyplot(fig_pca)
 
-    st.dataframe(outputs["cluster_means_k4"], use_container_width=True)
     st.write(
         "Los clusters distinguen etapas históricas del Carnaval: periodo pre-pandemia, transición, outlier pandémico y recuperación post-pandemia."
     )
