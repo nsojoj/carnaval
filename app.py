@@ -633,7 +633,6 @@ with tab4:
 
     st.markdown("<div class='section-card'>", unsafe_allow_html=True)
     st.subheader("Clasificación")
-    st.dataframe(outputs["model_results"].round(2), use_container_width=True)
 
     fig_imp, ax_imp = plt.subplots(figsize=(10, 6))
     sns.barplot(
